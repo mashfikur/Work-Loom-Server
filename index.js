@@ -36,8 +36,13 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
 
+    //    <-------- databse collections---------->
     const blogsCollection = client.db("workLoomDB").collection("blogs");
     const employeesCollection = client.db("workLoomDB").collection("employees");
+    const postedJobsCollection = client
+      .db("workLoomDB")
+      .collection("postedJobs");
+    // <-------- databse collections---------->
 
     app.get("/api/v1/employees", async (req, res) => {
       const cursor = employeesCollection.find();
@@ -57,6 +62,12 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await blogsCollection.findOne(query);
 
+      res.send(result);
+    });
+
+    app.post("/api/v1/user/add-job", async (req, res) => {
+      const jobInfo = req.body;
+      const result = await postedJobsCollection.insertOne(jobInfo);
       res.send(result);
     });
 
