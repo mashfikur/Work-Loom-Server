@@ -106,6 +106,16 @@ async function run() {
       res.send(result);
     });
 
+    app.post("/api/v1/user/apply-job/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await postedJobsCollection.updateOne(filter, {
+        $inc: { applied: 1 },
+      });
+
+      res.send(result);
+    });
+
     // <-------- All PATCH Requests ---------->
     app.patch("/api/v1/user/update-job/:id", async (req, res) => {
       const id = req.params.id;
@@ -142,6 +152,15 @@ async function run() {
       };
 
       const result = await postedJobsCollection.updateOne(filter, updateDoc);
+
+      res.send(result);
+    });
+
+    // <-------- All DELETE Requests ---------->
+    app.delete("/api/v1/user/delete-job/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await postedJobsCollection.deleteOne(query);
 
       res.send(result);
     });
