@@ -44,6 +44,8 @@ async function run() {
       .collection("postedJobs");
     // <-------- databse collections---------->
 
+    // <-------- All GET Requests ---------->
+
     app.get("/api/v1/employees", async (req, res) => {
       const cursor = employeesCollection.find();
       const result = await cursor.toArray();
@@ -65,9 +67,82 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/api/v1/all-jobs", async (req, res) => {
+      const cursor = postedJobsCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get("/api/v1/all-jobs/category/:name", async (req, res) => {
+      const categoryName = req.params.name;
+      const query = { category: categoryName };
+      const cursor = postedJobsCollection.find(query);
+      const result = await cursor.toArray();
+
+      res.send(result);
+    });
+
+    app.get("/api/v1/all-jobs/job/details/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await postedJobsCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.get("/api/v1/user/posted-jobs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { user_id: id };
+      const cursor = postedJobsCollection.find(query);
+      const result = await cursor.toArray();
+
+      res.send(result);
+    });
+
+    // <-------- All POST Requests ---------->
+
     app.post("/api/v1/user/add-job", async (req, res) => {
       const jobInfo = req.body;
       const result = await postedJobsCollection.insertOne(jobInfo);
+      res.send(result);
+    });
+
+    // <-------- All PATCH Requests ---------->
+    app.patch("/api/v1/user/update-job/:id", async (req, res) => {
+      const id = req.params.id;
+      const jobInfo = req.body;
+      const {
+        user_id,
+        posted_by,
+        posted_date,
+        title,
+        company,
+        company_logo,
+        category,
+        banner,
+        salary,
+        deadline,
+        description,
+      } = jobInfo;
+      const filter = { _id: new ObjectId(id) };
+
+      const updateDoc = {
+        $set: {
+          user_id,
+          posted_by,
+          posted_date,
+          title,
+          company,
+          company_logo,
+          category,
+          banner,
+          salary,
+          deadline,
+          description,
+        },
+      };
+
+      const result = await postedJobsCollection.updateOne(filter, updateDoc);
+
       res.send(result);
     });
 
