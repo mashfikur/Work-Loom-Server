@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 
 const app = express();
@@ -14,6 +16,26 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
+
+// custom midddlewares
+const verifyToken = async (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) {
+    res.status(401).send({ message: "Unauthorized Access" });
+    return;
+  }
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      res.status(401).send({ message: "Unauthorized Access" });
+      return;
+    }
+
+    req.user = decoded;
+    next();
+  });
+};
 
 // root URL
 app.get("/", async (req, res) => {
@@ -45,6 +67,31 @@ async function run() {
     const appliedJobsCollection = client
       .db("workLoomDB")
       .collection("appliedJobs");
+
+    // <-------- Generating Token upon user login & register ---------->
+    app.post("/api/v1/auth/create-token", async (req, res) => {
+      const user_info = req.body;
+      const token = jwt.sign(user_info, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res
+        .cookie("token", token, {
+          httpOnly: process.env.NODE_ENV === "production" ? true : false,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
+    });
+
+    // <-------- Deleting Token upon user logout---------->
+    app.get("/api/v1/auth/remove-token", async (req, res) => {
+      res
+        .clearCookie("token", {
+          maxAge: 0,
+        })
+        .send({ success: true });
+    });
 
     // <-------- All GET Requests ---------->
 
@@ -91,8 +138,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/api/v1/user/posted-jobs/:id", async (req, res) => {
+    app.get("/api/v1/user/posted-jobs/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
+      if (id !== req.user.uid) {
+        res.status(403).send({ message: "Forbidden Access" });
+        return;
+      }
       const query = { user_id: id };
       const cursor = postedJobsCollection.find(query);
       const result = await cursor.toArray();
@@ -100,20 +151,22 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/api/v1/user/applied-jobs/:id", async (req, res) => {
+    app.get("/api/v1/user/applied-jobs/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { user_id: id };
+      if (id !== req.user.uid) {
+        res.status(403).send({ message: "Forbidden Access" });
+        return;
+      }
       const cursor = appliedJobsCollection.find(query);
       const result = await cursor.toArray();
 
       const appliedJobs = result.map((job) => new ObjectId(job.job_id));
-      // console.log(appliedJobs);
 
       const findingJobQuery = { _id: { $in: appliedJobs } };
       const findedJobCursor = postedJobsCollection.find(findingJobQuery);
 
       const findedJobs = await findedJobCursor.toArray();
-      // console.log(findedJobs);
 
       res.send(findedJobs);
     });
