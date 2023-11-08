@@ -11,7 +11,7 @@ const port = process.env.PORT || 5000;
 // middlewares
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: ["https://work-loom.web.app"],
     credentials: true,
   })
 );
@@ -77,7 +77,7 @@ async function run() {
 
       res
         .cookie("token", token, {
-          httpOnly: process.env.NODE_ENV === "production" ? true : false,
+          httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
@@ -89,6 +89,8 @@ async function run() {
       res
         .clearCookie("token", {
           maxAge: 0,
+          secure: true,
+          sameSite: "none",
         })
         .send({ success: true });
     });
