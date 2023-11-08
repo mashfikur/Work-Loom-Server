@@ -45,7 +45,6 @@ async function run() {
     const appliedJobsCollection = client
       .db("workLoomDB")
       .collection("appliedJobs");
-    // <-------- databse collections---------->
 
     // <-------- All GET Requests ---------->
 
