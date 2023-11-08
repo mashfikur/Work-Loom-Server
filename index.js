@@ -42,6 +42,9 @@ async function run() {
     const postedJobsCollection = client
       .db("workLoomDB")
       .collection("postedJobs");
+    const appliedJobsCollection = client
+      .db("workLoomDB")
+      .collection("appliedJobs");
     // <-------- databse collections---------->
 
     // <-------- All GET Requests ---------->
@@ -98,6 +101,24 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/api/v1/user/applied-jobs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { user_id: id };
+      const cursor = appliedJobsCollection.find(query);
+      const result = await cursor.toArray();
+
+      const appliedJobs = result.map((job) => new ObjectId(job.job_id));
+      // console.log(appliedJobs);
+
+      const findingJobQuery = { _id: { $in: appliedJobs } };
+      const findedJobCursor = postedJobsCollection.find(findingJobQuery);
+
+      const findedJobs = await findedJobCursor.toArray();
+      // console.log(findedJobs);
+
+      res.send(findedJobs);
+    });
+
     // <-------- All POST Requests ---------->
 
     app.post("/api/v1/user/add-job", async (req, res) => {
@@ -108,10 +129,14 @@ async function run() {
 
     app.post("/api/v1/user/apply-job/:id", async (req, res) => {
       const id = req.params.id;
+      const appliedJobInfo = req.body;
       const filter = { _id: new ObjectId(id) };
-      const result = await postedJobsCollection.updateOne(filter, {
+      const updateJobApplicant = await postedJobsCollection.updateOne(filter, {
         $inc: { applied: 1 },
       });
+
+      // posting job to the database
+      const result = await appliedJobsCollection.insertOne(appliedJobInfo);
 
       res.send(result);
     });
